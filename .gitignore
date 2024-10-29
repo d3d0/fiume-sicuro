@@ -1,0 +1,46 @@
+# Template
+falcon/
+falcon-v3.17.0
+
+# File Python bytecode
+__pycache__/
+*.py[cod]
+
+# Configurazioni per ambienti virtuali
+venv/
+env/
+.venv/
+.env/
+
+# File di configurazione sensibili
+*.env
+*.flaskenv
+instance/
+config.py
+
+# Log e file di output
+*.log
+*.out
+*.err
+
+# Database SQLite
+*.sqlite3
+*.db
+
+# Cache e file temporanei
+*.bak
+*.swp
+*.tmp
+
+# Cartelle generate da strumenti come Jupyter o VSCode
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# Cartella delle dipendenze se si usa pipenv o poetry
+Pipfile.lock
+poetry.lock
+
+# Altri file temporanei
+.DS_Store
+

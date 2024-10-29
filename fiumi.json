@@ -1,0 +1,194 @@
+{
+  "_items": [
+    {
+      "_id": "13040",
+      "anagrafica": {
+        "nome": "Firenzuola idro",
+        "altitudine": 279,
+        "geometry": {
+          "type": "Point",
+          "coordinates": [11.45426, 44.1521]
+        },
+        "cod_istat": "048018",
+        "bacino": "SANTERNO",
+        "sottobacino": "SANTERNO",
+        "macroarea": "ALTO RENO",
+        "proprietario": "Regione Toscana",
+        "gestore": "Regione Toscana",
+        "variabili": [
+          "livello_idro"
+        ],
+        "sensori": {
+          "livello_idro": {
+            "soglie": [2.5, 3.5, 5.5],
+            "bacino": "SANTERNO",
+            "sottobacino": "SANTERNO",
+            "altitudine": 285
+          }
+        },
+        "comune": "Firenzuola",
+        "provincia": "Firenze",
+        "regione": "Toscana"
+      },
+      "dati": {
+        "20241025": {
+          "0000": {
+            "livello_idro": 0.98
+          },
+          "0030": {
+            "livello_idro": 0.97
+          },
+          "0100": {
+            "livello_idro": 0.97
+          },
+          "0130": {
+            "livello_idro": 0.97
+          },
+          "0200": {
+            "livello_idro": 0.95
+          },
+          "0230": {
+            "livello_idro": 0.95
+          },
+          "0300": {
+            "livello_idro": 0.95
+          },
+          "0330": {
+            "livello_idro": 0.94
+          },
+          "0400": {
+            "livello_idro": 0.94
+          },
+          "0430": {
+            "livello_idro": 0.94
+          },
+          "0500": {
+            "livello_idro": 0.93
+          },
+          "0530": {
+            "livello_idro": 0.92
+          },
+          "0600": {
+            "livello_idro": 0.92
+          },
+          "0630": {
+            "livello_idro": 0.92
+          },
+          "0700": {
+            "livello_idro": 0.91
+          },
+          "0730": {
+            "livello_idro": 0.91
+          },
+          "0800": {
+            "livello_idro": 0.92
+          }
+        }
+      },
+      "_updated": "Fri, 25 Oct 2024 08:17:48 GMT",
+      "_created": "Mon, 13 Dec 2021 07:07:40 GMT",
+      "_etag": "dfde0cf33df606edf8ef4d87bf0a2d00d828ce6e",
+      "_links": {
+        "self": {
+          "title": "Meteo - Dati osservati dalla rete di stazioni",
+          "href": "meteo_osservati/13040"
+        }
+      }
+    },
+    {
+      "_id": "14023",
+      "anagrafica": {
+        "nome": "Mignano Diga",
+        "altitudine": 342,
+        "geometry": {
+          "type": "Point",
+          "coordinates": [9.800531, 44.771376]
+        },
+        "cod_istat": "033044",
+        "bacino": "ARDA",
+        "sottobacino": "ARDA",
+        "macroarea": "PIANURA PC-PR",
+        "proprietario": "Consorzio di Bonifica di Piacenza",
+        "gestore": "Consorzio di Bonifica di Piacenza",
+        "variabili": [
+          "livello_idro"
+        ],
+        "sensori": {
+          "livello_idro": {
+            "soglie": [335.8, 337.8, 340.5],
+            "bacino": "ARDA",
+            "sottobacino": "ARDA",
+            "altitudine": 342
+          }
+        },
+        "comune": "Vernasca",
+        "provincia": "Piacenza",
+        "regione": "Emilia-Romagna"
+      },
+      "dati": {
+        "20241025": {
+          "0000": {
+            "livello_idro": 325.56
+          },
+          "0030": {
+            "livello_idro": 325.55
+          },
+          "0100": {
+            "livello_idro": 325.53
+          },
+          "0130": {
+            "livello_idro": 325.51
+          },
+          "0200": {
+            "livello_idro": 325.49
+          },
+          "0230": {
+            "livello_idro": 325.49
+          },
+          "0300": {
+            "livello_idro": 325.49
+          },
+          "0330": {
+            "livello_idro": 325.44
+          },
+          "0400": {
+            "livello_idro": 325.42
+          },
+          "0430": {
+            "livello_idro": 325.4
+          },
+          "0500": {
+            "livello_idro": 325.38
+          },
+          "0530": {
+            "livello_idro": 325.36
+          },
+          "0600": {
+            "livello_idro": 325.34
+          },
+          "0630": {
+            "livello_idro": 325.32
+          },
+          "0700": {
+            "livello_idro": 325.3
+          },
+          "0730": {
+            "livello_idro": 325.28
+          },
+          "0800": {
+            "livello_idro": 325.26
+          }
+        }
+      },
+      "_updated": "Fri, 25 Oct 2024 08:06:11 GMT",
+      "_created": "Mon, 13 Dec 2021 07:07:39 GMT",
+      "_etag": "4e28663d165a72632c24378f1eba0d2ecaa49d47",
+      "_links": {
+        "self": {
+          "title": "Meteo - Dati osservati dalla rete di stazioni",
+          "href": "meteo_osservati/14023"
+        }
+      }
+    }
+  ]
+}

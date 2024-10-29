@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dati Livello Idro</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dati Livello Idro</h1>
+    <table>
+        <tr>
+            <th>Nome Stazione</th>
+            <th>Data 2024-10-22</th>
+            <th>Data 2024-10-21</th>
+            <th>Data 2024-10-20</th>
+        </tr>
+        {% for item in data['_items'] %}
+        <tr>
+            <td>{{ item['anagrafica']['nome'] }}</td>
+            <td>{{ item['dati']['20241022'] | default('N/A') }}</td>
+            <td>{{ item['dati']['20241021'] | default('N/A') }}</td>
+            <td>{{ item['dati']['20241020'] | default('N/A') }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
