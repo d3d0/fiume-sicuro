@@ -6,6 +6,10 @@ import requests
 from typing import Dict, Any
 import os
 from dotenv import load_dotenv
+import signal
+import sys
+import schedule
+import time
 
 # Carica le variabili d'ambiente dal file .env
 load_dotenv()
@@ -154,28 +158,26 @@ class ArpaeDataLoader:
 
         sql = """
         INSERT INTO misurazioni (
-            stazione_id, data_rilevazione, ora_rilevazione,
-            tipo_misurazione, valore
-        ) VALUES (%s, %s, %s, %s, %s)
+            stazione_id, data_ora_rilevazione, tipo_misurazione, valore
+        ) VALUES (%s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE valore = VALUES(valore)
         """
-        
-        data_formattata = datetime.strptime(date_str, '%Y%m%d').date()
-        
+
         for ora, misurazioni in measurements_data[date_str].items():
             ora_formattata = f"{ora[:2]}:{ora[2:]}:00"
-            
+            data_formattata = datetime.strptime(f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}", '%Y-%m-%d').date()
+            data_ora_rilevazione = datetime.combine(data_formattata, datetime.strptime(ora_formattata, '%H:%M:%S').time())
+
             for tipo_mis, valore in misurazioni.items():
                 values = (
                     station_id,
-                    data_formattata,
-                    ora_formattata,
+                    data_ora_rilevazione,
                     tipo_mis,
                     valore
                 )
-                
+
                 self.cursor.execute(sql, values)
-                
+
         self.connection.commit()
         logger.info(f"Misurazioni per stazione {station_id} del {date_str} inserite")
 
@@ -185,8 +187,13 @@ class ArpaeDataLoader:
             # Recupera i dati dall'API
             json_data = self.fetch_data_from_api(selected_date)
             
-            # Processa ogni stazione
-            for item in json_data['_items']:
+            # ATTENZIONE: Processa solo la prima stazione
+            if json_data['_items']:
+                item = json_data['_items'][0]
+
+            # ATTENZIONE: Processa ogni stazione
+            # for item in json_data['_items']:
+
                 # Inserisce i dati della stazione
                 self.insert_station(item)
                 
@@ -215,8 +222,10 @@ def main():
     try:
         # Mostra le configurazioni di connessione (senza password)
         logger.info(f"Tentativo di connessione a: {os.getenv('DB_HOST', '127.0.0.1')}:{os.getenv('DB_PORT', '3306')}")
-        logger.info(f"Database: {os.getenv('DB_NAME', 'arpae_db')}")
+        logger.info(f"Database: {os.getenv('DB_NAME', 'fiumesicuro')}")
         logger.info(f"Utente: {os.getenv('DB_USER', 'root')}")
+        logger.info("-" * 50)  # Linea separatrice dopo l'elaborazione
+        logger.info("")  # Riga vuota alla fine
         
         # Data per cui recuperare i dati (formato YYYYMMDD)
         selected_date = date.today().strftime('%Y%m%d')
@@ -231,6 +240,26 @@ def main():
         if 'loader' in locals():
             loader.close()
 
+def scheduled_data_import():
+    while True:
+        main()
+        logger.info("Elaborazione dei dati completata. Attendo 30 minuti per il prossimo ciclo.")
+        logger.info("")  # Riga vuota alla fine
+        time.sleep(5)  # Attesa di 30 minuti
+
+def signal_handler(sig, frame):
+    logger.info("Interruzione rilevata. Chiusura in corso...")
+    sys.exit(0)
+
 if __name__ == "__main__":
-    main()
-    
+    # main()
+
+    # Configura il gestore di segnali per intercettare l'interruzione da tastiera
+    signal.signal(signal.SIGINT, signal_handler)
+
+    # Configura lo scheduler per eseguire la funzione scheduled_data_import ogni 30 minuti
+    schedule.every(5).seconds.do(scheduled_data_import)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
