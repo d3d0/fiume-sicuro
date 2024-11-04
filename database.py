@@ -19,7 +19,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('arpae_data_loader.log'),
+        logging.FileHandler('logs/arpae_data_loader.log'),
         logging.StreamHandler()
     ]
 )
@@ -60,7 +60,7 @@ class ArpaeDataLoader:
         params = {
             "where": json.dumps(where_clause),
             "projection": json.dumps(projection_clause),
-            "max_results": 1000
+            "max_results": 100000
         }
         
         try:
@@ -78,9 +78,9 @@ class ArpaeDataLoader:
         INSERT INTO stazioni (
             id, nome, altitudine, longitude, latitude, cod_istat,
             bacino, sottobacino, macroarea, proprietario, gestore,
-            comune, provincia, regione
+            comune, provincia, regione, multifunzione
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         ) ON DUPLICATE KEY UPDATE
             nome = VALUES(nome),
             altitudine = VALUES(altitudine),
@@ -94,9 +94,14 @@ class ArpaeDataLoader:
             gestore = VALUES(gestore),
             comune = VALUES(comune),
             provincia = VALUES(provincia),
-            regione = VALUES(regione)
+            regione = VALUES(regione),
+            multifunzione = VALUES(multifunzione)
         """
         ana = station_data['anagrafica']
+
+        # flag for multi-variable stations.
+        multifunzione = 1 if len(ana['variabili']) > 1 else 0
+
         values = (
             station_data['_id'],
             ana['nome'],
@@ -111,12 +116,13 @@ class ArpaeDataLoader:
             ana['gestore'],
             ana['comune'],
             ana['provincia'],
-            ana['regione']
+            ana['regione'],
+            multifunzione
         )
         
         self.cursor.execute(sql, values)
         self.connection.commit()
-        logger.info(f"Stazione {ana['nome']} (ID: {station_data['_id']}) inserita/aggiornata")
+        logger.info(f"> Stazione: {ana['nome']} (ID: {station_data['_id']}) inserita/aggiornata")
 
     def insert_sensors(self, station_id: str, sensors_data: Dict[str, Any]) -> None:
         """Inserisce o aggiorna i dati dei sensori."""
@@ -148,9 +154,96 @@ class ArpaeDataLoader:
             
             self.cursor.execute(sql, values)
             self.connection.commit()
-            logger.info(f"Sensore {tipo_variabile} per stazione {station_id} inserito/aggiornato")
+            logger.info(f">>> Sensore: {tipo_variabile} per stazione {station_id} inserito/aggiornato")
 
     def insert_measurements(self, station_id: str, measurements_data: Dict[str, Any], date_str: str) -> None:
+        
+        # Controlla se la stazione ha multifunzione impostato a 1
+        sql_multifunzione_check = """
+        SELECT multifunzione 
+        FROM stazioni 
+        WHERE id = %s;
+        """
+        self.cursor.execute(sql_multifunzione_check, (station_id,))
+        result = self.cursor.fetchone()
+        
+        # Procede solo se la stazione ha multifunzione = 1
+        # if result is None or result['multifunzione'] != 1:
+        #     logger.warning(f"La stazione {station_id} non è multifunzione!")
+        #     logger.info("-" * 25)
+        #     return
+        
+        # Controlla se measurements_data contiene 'livello_idro' e 'temperatura_istantanea_2m'
+        # if not all(key in measurements_data.get(date_str, {}).get(next(iter(measurements_data[date_str])), {}) for key in ['livello_idro', 'temperatura_istantanea_2m']):
+        #     logger.warning(f"Misurazioni mancanti: 'livello_idro' e/o 'temperatura_istantanea_2m' per la data {date_str} nella stazione {station_id}.")
+        #     logger.info("-" * 25)
+        #     return
+
+        # controllo su aggiornamento
+        update = False
+        
+        if date_str not in measurements_data:
+            logger.warning(f"Nessun dato disponibile per la data {date_str} nella stazione {station_id}")
+            return
+
+        data_formattata_singola = datetime.strptime(date_str, '%Y%m%d').date()
+
+        for ora, misurazioni in measurements_data[date_str].items():
+            ora_formattata_singola = f"{ora[:2]}:{ora[2:]}:00"
+            ora_formattata = f"{ora[:2]}:{ora[2:]}:00"
+            data_formattata = datetime.strptime(f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}", '%Y-%m-%d').date()
+            data_ora_rilevazione = datetime.combine(data_formattata, datetime.strptime(ora_formattata, '%H:%M:%S').time())
+
+            for tipo_mis, valore in misurazioni.items():
+                sql = """
+                SELECT COUNT(*) AS conteggio
+                FROM misurazioni
+                WHERE stazione_id = %s AND data_ora_rilevazione = %s AND tipo_misurazione = %s;
+                """
+                self.cursor.execute(sql, (station_id, data_ora_rilevazione, tipo_mis))
+
+                result = self.cursor.fetchone()
+
+                # Verifica se result non è None
+                if result is not None:
+                    count = result['conteggio']  # Estrai il conteggio
+                    if count > 0:
+                        # logger.info(f"Record già presente per la stazione {station_id} con data/ora {data_ora_rilevazione} e tipo {tipo_mis}.")
+                        sql = """
+                        UPDATE misurazioni
+                        SET valore = %s
+                        WHERE stazione_id = %s AND data_ora_rilevazione = %s AND tipo_misurazione = %s;
+                        """
+                        self.cursor.execute(sql, (valore, station_id, data_ora_rilevazione, tipo_mis))
+                        update = True
+                    else:
+                        # logger.info(f"Nuova misurazione da inserire per la stazione {station_id}.")
+                        sql = """
+                        INSERT INTO misurazioni (
+                            stazione_id, data_ora_rilevazione, data_rilevazione, ora_rilevazione, tipo_misurazione, valore
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
+                        """
+                        values = (
+                            station_id,
+                            data_ora_rilevazione,
+                            data_formattata_singola,
+                            ora_formattata_singola,
+                            tipo_mis,
+                            valore
+                        )
+                        self.cursor.execute(sql, values)
+                        update = False
+                else:
+                    logger.warning("Nessun risultato dalla query COUNT.")
+
+        self.connection.commit()
+        if update:
+            logger.info(f">>>>>>>>>> Misurazioni per stazione {station_id} del {date_str} aggiornate")
+        else:
+            logger.info(f">>>>>>>>>> Misurazioni per stazione {station_id} del {date_str} inserite")
+        logger.info("-" * 25)
+
+    def insert_measurements_OLD(self, station_id: str, measurements_data: Dict[str, Any], date_str: str) -> None:
         """Inserisce le misurazioni."""
         if date_str not in measurements_data:
             logger.warning(f"Nessun dato disponibile per la data {date_str} nella stazione {station_id}")
@@ -158,12 +251,15 @@ class ArpaeDataLoader:
 
         sql = """
         INSERT INTO misurazioni (
-            stazione_id, data_ora_rilevazione, tipo_misurazione, valore
-        ) VALUES (%s, %s, %s, %s)
+            stazione_id, data_ora_rilevazione, data_rilevazione, ora_rilevazione, tipo_misurazione, valore
+        ) VALUES (%s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE valore = VALUES(valore)
         """
 
+        data_formattata_singola = datetime.strptime(date_str, '%Y%m%d').date()
+
         for ora, misurazioni in measurements_data[date_str].items():
+            ora_formattata_singola = f"{ora[:2]}:{ora[2:]}:00"
             ora_formattata = f"{ora[:2]}:{ora[2:]}:00"
             data_formattata = datetime.strptime(f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}", '%Y-%m-%d').date()
             data_ora_rilevazione = datetime.combine(data_formattata, datetime.strptime(ora_formattata, '%H:%M:%S').time())
@@ -172,6 +268,8 @@ class ArpaeDataLoader:
                 values = (
                     station_id,
                     data_ora_rilevazione,
+                    data_formattata_singola,
+                    ora_formattata_singola,
                     tipo_mis,
                     valore
                 )
@@ -179,7 +277,8 @@ class ArpaeDataLoader:
                 self.cursor.execute(sql, values)
 
         self.connection.commit()
-        logger.info(f"Misurazioni per stazione {station_id} del {date_str} inserite")
+        logger.info(f">>>>> Misurazioni per stazione {station_id} del {date_str} inserite/aggiornate")
+        logger.info("-" * 25)  # Linea separatrice dopo l'elaborazione
 
     def process_data(self, selected_date: str) -> None:
         """Elabora i dati dall'API e li inserisce nel database."""
@@ -188,11 +287,12 @@ class ArpaeDataLoader:
             json_data = self.fetch_data_from_api(selected_date)
             
             # ATTENZIONE: Processa solo la prima stazione
-            if json_data['_items']:
-                item = json_data['_items'][0]
+            # if json_data['_items']:
+            #     item = json_data['_items'][0]
 
             # ATTENZIONE: Processa ogni stazione
-            # for item in json_data['_items']:
+            if json_data['_items']:
+              for item in json_data['_items']:
 
                 # Inserisce i dati della stazione
                 self.insert_station(item)
@@ -226,9 +326,22 @@ def main():
         logger.info(f"Utente: {os.getenv('DB_USER', 'root')}")
         logger.info("-" * 50)  # Linea separatrice dopo l'elaborazione
         logger.info("")  # Riga vuota alla fine
+
+        # Chiedi all'utente se vuole usare la data odierna o una data specifica
+        scelta = input("Vuoi utilizzare la data odierna (O) o specificare una data (S)? ").strip().upper()
         
+        if scelta == 'S':
+            # Input della data in formato YYYYMMDD
+            data_input = input("Inserisci la data (formato YYYYMMDD): ")
+            selected_date = data_input
+        else:
+            # Data odierna
+            selected_date = date.today().strftime('%Y%m%d')
+        
+        logger.info(f"Data selezionata: {selected_date}")
+
         # Data per cui recuperare i dati (formato YYYYMMDD)
-        selected_date = date.today().strftime('%Y%m%d')
+        # selected_date = date.today().strftime('%Y%m%d')
         
         # Inizializza il loader e processa i dati
         loader = ArpaeDataLoader()
@@ -245,7 +358,8 @@ def scheduled_data_import():
         main()
         logger.info("Elaborazione dei dati completata. Attendo 30 minuti per il prossimo ciclo.")
         logger.info("")  # Riga vuota alla fine
-        time.sleep(5)  # Attesa di 30 minuti
+        # time.sleep(1800)  # Attesa di 30 minuti
+        time.sleep(5)  # Attesa di 5 minuti
 
 def signal_handler(sig, frame):
     logger.info("Interruzione rilevata. Chiusura in corso...")
@@ -258,8 +372,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
 
     # Configura lo scheduler per eseguire la funzione scheduled_data_import ogni 30 minuti
-    schedule.every(5).seconds.do(scheduled_data_import)
+    schedule.every(1).seconds.do(scheduled_data_import)
 
     while True:
         schedule.run_pending()
         time.sleep(1)
+
+# query di test:
+# INSERT INTO `misurazioni` (stazione_id, data_ora_rilevazione, data_rilevazione, ora_rilevazione, tipo_misurazione, valore) 
+# VALUES (13040, '2024-10-30 00:00:00', '2024-10-30', '11:30:00', 'livello_idro', 1.63)
+# ON DUPLICATE KEY UPDATE valore = VALUES(valore)

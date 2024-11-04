@@ -1,6 +1,6 @@
 # Template
-falcon/
-falcon-v3.17.0
+__private/
+__risorse/
 
 # File Python bytecode
 __pycache__/
@@ -8,8 +8,10 @@ __pycache__/
 
 # Configurazioni per ambienti virtuali
 venv/
+venv_3_11/
 env/
 .venv/
+.venv_3_11/
 .env/
 
 # File di configurazione sensibili
