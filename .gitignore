@@ -1,6 +1,6 @@
 # Template
-__private/
-__risorse/
+____private____/
+____risorse____/
 
 # File Python bytecode
 __pycache__/
