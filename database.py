@@ -19,7 +19,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/arpae_data_loader.log'),
+        logging.FileHandler('logs/arpae_data_loader_01.log'),
         logging.StreamHandler()
     ]
 )
